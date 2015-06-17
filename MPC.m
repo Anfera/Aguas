@@ -1,0 +1,49 @@
+yalmip('clear')
+
+% Model data
+A = modelo.a;
+B = modelo.b;
+C = modelo.c;
+nx = 10; % Number of states
+nu = 3; % Number of inputs
+ny = 3; %Number of outputs
+
+% MPC data
+Q = 10*eye(nx);
+R = eye(3);
+N = 10;
+NSim = 95;
+% Initial state
+x0 = ones(nx,1);
+X = zeros(nx,NSim);
+X(:,1) = x0;
+
+u = sdpvar(repmat(nu,1,N),repmat(1,1,N));
+
+for i = 1:NSim
+    constraints = [];
+    objective = 0;
+    x = X(:,i);
+    
+    for k = 1:N
+     x = A*x + B*u{k};
+     objective = objective + norm(Q*(x),2) + norm(R*u{k},2);
+     constraints = [constraints, 0 <= u{k}<= 0.25, 0<=C*x<=4];
+    end
+    
+    optimize(constraints,objective);
+    X(:,i+1) = A*X(:,i) + B*value(u{1});
+    u_(i,:) = value(u{1});
+    i
+end
+
+subplot(2,1,1)
+plot((C*X)','linewidth',2)
+title('Estados')
+ylabel('Altura')
+%legend('Tanque 1','Tanque 2','Tanque 3')
+subplot(2,1,2)
+stairs(u_,'linewidth',2)
+title('Entradas')
+ylabel('Apertura')
+legend('Valvula 1','Valvula 2','Valvula 3')
